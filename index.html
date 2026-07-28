@@ -64,6 +64,8 @@
         .hidden { display: none !important; }
         .inventory-input { width: 100%; background: #121212; border: 1px solid #374151; border-radius: 0.5rem; padding: 0.5rem; color: white; font-size: 0.875rem; }
         .mental-input { width: 100%; background: #121212; border: 1px solid #374151; border-radius: 0.5rem; padding: 0.5rem; color: white; font-size: 0.875rem; }
+        .world-input { width: 100%; background: #121212; border: 1px solid #374151; border-radius: 0.5rem; padding: 0.5rem; color: white; font-size: 0.875rem; }
+        .destiny-input { width: 100%; background: #121212; border: 1px solid #374151; border-radius: 0.5rem; padding: 0.5rem; color: white; font-size: 0.875rem; }
         .inventory-label { display: block; font-size: 0.75rem; color: #9ca3af; margin-bottom: 0.25rem; }
     </style>
 </head>
@@ -205,6 +207,8 @@
                         <div class="mt-4 grid grid-cols-2 gap-2">
                             <button onclick="openInventoryModal(currentCharId)" class="w-full bg-red-950/70 hover:bg-red-900 border border-red-700 text-white font-bold py-2 rounded-lg transition">⚔️ Inventario</button>
                             <button onclick="openMentalModal(currentCharId)" class="w-full bg-purple-950/70 hover:bg-purple-900 border border-purple-700 text-white font-bold py-2 rounded-lg transition">🧠 Mente</button>
+                            <button onclick="openWorldModal(currentCharId)" class="w-full bg-emerald-950/70 hover:bg-emerald-900 border border-emerald-700 text-white font-bold py-2 rounded-lg transition">🌎 Mundo</button>
+                            <button onclick="openDestinyModal(currentCharId)" class="w-full bg-sky-950/70 hover:bg-sky-900 border border-sky-700 text-white font-bold py-2 rounded-lg transition">🔮 Destino</button>
                         </div>
                         <div class="mt-4 bg-gray-900/70 rounded-lg border border-gray-700 p-4">
                             <h4 class="text-xs font-bold uppercase tracking-[0.2em] text-white mb-3">Atributos principales</h4>
@@ -332,6 +336,35 @@
         </div>
     </div>
 
+
+    <!-- World / Social Status Modal -->
+    <div id="world-modal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4 modal-overlay">
+        <div class="bg-card w-full max-w-5xl rounded-xl shadow-2xl border border-emerald-700/60 overflow-hidden flex flex-col max-h-[92vh]">
+            <div class="flex justify-between items-center p-4 border-b border-gray-800 bg-gray-900"><div><h3 id="world-title" class="text-xl font-bold">🌎 Mundo</h3><p class="text-xs text-gray-400 mt-1">Compañeros, clanes, apodos, misiones y deudas que modifican la batalla.</p></div><button onclick="closeWorldModal()" class="text-gray-400 hover:text-white text-2xl">&times;</button></div>
+            <div class="flex-1 overflow-y-auto p-6 space-y-6">
+                <form id="world-form" class="bg-emerald-950/20 border border-emerald-700/50 rounded-xl p-4 space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div><label class="inventory-label">Apodo / Título visible</label><input id="world-title-input" placeholder="El León Sanguinario" class="world-input"></div><div><label class="inventory-label">Compañeros designados</label><select id="world-companions" multiple size="5" class="world-input"></select></div></div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div><label class="inventory-label">Misión: objetivo ofensivo a vencer</label><input id="world-mission-offense" placeholder="Nombre o tipo de personaje" class="world-input"></div><div><label class="inventory-label">Misión: objetivo defensivo a proteger</label><input id="world-mission-protect" placeholder="Nombre o tipo protegido" class="world-input"></div><div><label class="inventory-label">Deuda: vence a este objetivo para saldarla</label><input id="world-debt-target" placeholder="Nombre o tipo de personaje" class="world-input"></div><div><label class="inventory-label">Estado de deuda</label><select id="world-debt-active" class="world-input"><option value="true">Activa (-5 constante)</option><option value="false">Saldada</option></select></div></div>
+                    <button class="w-full bg-emerald-700 hover:bg-emerald-600 text-white font-bold py-2 rounded-lg">Guardar relaciones y estatus</button>
+                </form>
+                <div id="world-summary" class="grid grid-cols-1 lg:grid-cols-2 gap-4 text-sm"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Destiny / Supernatural Modal -->
+    <div id="destiny-modal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4 modal-overlay">
+        <div class="bg-card w-full max-w-4xl rounded-xl shadow-2xl border border-sky-700/60 overflow-hidden flex flex-col max-h-[92vh]">
+            <div class="flex justify-between items-center p-4 border-b border-gray-800 bg-gray-900"><div><h3 id="destiny-title" class="text-xl font-bold">🔮 Destino</h3><p class="text-xs text-gray-400 mt-1">Maldiciones, bendiciones y juramentos fijan o alteran atributos.</p></div><button onclick="closeDestinyModal()" class="text-gray-400 hover:text-white text-2xl">&times;</button></div>
+            <form id="destiny-form" class="flex-1 overflow-y-auto p-6 space-y-5">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div><label class="inventory-label">Maldición: atributo bloqueado en 0</label><select id="destiny-curse" class="destiny-input"><option value="">Sin maldición</option></select></div><div><label class="inventory-label">Bendición / Don: atributo fijado en 100</label><select id="destiny-blessing" class="destiny-input"><option value="">Sin bendición</option></select></div></div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4"><div><label class="inventory-label">Juramento</label><select id="destiny-oath-path" class="destiny-input"><option value="">Sin juramento</option><option value="risk">Camino del Riesgo (+40, -5 negativos si pierde)</option><option value="overcome">Camino de la Superación (-40, +5 positivos si gana)</option></select></div><div><label class="inventory-label">Atributo del juramento</label><select id="destiny-oath-attr" class="destiny-input"></select></div><div><label class="inventory-label">Nombre narrativo</label><input id="destiny-oath-name" placeholder="Juramento de la Luna" class="destiny-input"></div></div>
+                <textarea id="destiny-notes" rows="3" placeholder="Notas narrativas de la fuerza sobrenatural..." class="destiny-input"></textarea>
+                <button class="w-full bg-sky-700 hover:bg-sky-600 text-white font-bold py-2 rounded-lg">Guardar destino</button>
+            </form>
+        </div>
+    </div>
+
     <script>
         // State Management
         let state = {
@@ -435,6 +468,9 @@
                 }
                 char.equipment = (char.equipment || []).map(normalizeEquipment);
                 char.mental = (char.mental || []).map(normalizeMentalMilestone);
+                char.world = normalizeWorldStatus(char.world);
+                char.destiny = normalizeDestiny(char.destiny);
+                enforceDestinyStats(char);
             });
             
             // Render initial view
@@ -554,6 +590,77 @@
             };
         }
 
+
+
+        function normalizeWorldStatus(world = {}) {
+            return {
+                title: world.title || '',
+                companions: Array.isArray(world.companions) ? world.companions : [],
+                missionOffense: world.missionOffense || '',
+                missionProtect: world.missionProtect || '',
+                debtTarget: world.debtTarget || '',
+                debtActive: Boolean(world.debtActive && world.debtTarget)
+            };
+        }
+
+        function normalizeDestiny(destiny = {}) {
+            return {
+                curseAttr: destiny.curseAttr || '',
+                blessingAttr: destiny.blessingAttr || '',
+                oathPath: destiny.oathPath || '',
+                oathAttr: destiny.oathAttr || 'STR',
+                oathName: destiny.oathName || '',
+                notes: destiny.notes || ''
+            };
+        }
+
+        function getDisplayName(char) {
+            const world = normalizeWorldStatus(char.world);
+            return world.title ? `${char.name} (${world.title})` : char.name;
+        }
+
+        function getDisplayedStat(char, attrKey) {
+            const destiny = normalizeDestiny(char.destiny);
+            if (destiny.curseAttr === attrKey) return 0;
+            if (destiny.blessingAttr === attrKey) return 100;
+            return Number(char.stats[attrKey] || 0);
+        }
+
+        function enforceDestinyStats(char) {
+            const destiny = normalizeDestiny(char.destiny);
+            if (destiny.blessingAttr) char.stats[destiny.blessingAttr] = 100;
+            if (destiny.curseAttr) char.stats[destiny.curseAttr] = 0;
+        }
+
+        function rosterOptionsHtml(selected = [], excludeId = '') {
+            return state.characters.filter(c => c.id !== excludeId).map(c => `<option value="${escapeAttr(c.id)}" ${selected.includes(c.id) ? 'selected' : ''}>${escapeHtml(getDisplayName(c))}</option>`).join('');
+        }
+
+        function characterMatchesQuery(char, query) {
+            const text = String(query || '').trim().toLowerCase();
+            if (!text || !char) return false;
+            return text.split(',').some(entry => {
+                const token = entry.trim();
+                return token && (`${char.name} ${normalizeWorldStatus(char.world).title} ${char.story || ''}`).toLowerCase().includes(token);
+            });
+        }
+
+        function areCompanions(a, b) {
+            if (!a || !b) return false;
+            const aw = normalizeWorldStatus(a.world);
+            const bw = normalizeWorldStatus(b.world);
+            return aw.companions.includes(b.id) || bw.companions.includes(a.id);
+        }
+
+        function getTeamClanIds(team) {
+            const ids = new Set();
+            for (let i = 0; i < team.length; i++) for (let j = i + 1; j < team.length; j++) for (let k = j + 1; k < team.length; k++) {
+                const trio = [team[i], team[j], team[k]];
+                if (areCompanions(trio[0], trio[1]) && areCompanions(trio[0], trio[2]) && areCompanions(trio[1], trio[2])) trio.forEach(c => ids.add(c.id));
+            }
+            return ids;
+        }
+
         function isMentalMilestone(type) {
             return ['Acontecimiento', 'Sabiduría / Revelación', 'Miedo / Trauma', 'Debilidad', 'Mutación', 'Mutación / Marca Física'].includes(type);
         }
@@ -603,6 +710,8 @@
                 milestones: [],
                 equipment: [],
                 mental: [],
+                world: normalizeWorldStatus(),
+                destiny: normalizeDestiny(),
                 pendingMilestones: 0,
                 pendingAction: null // 'points'
             };
@@ -640,15 +749,15 @@
                     ${getImageHtml(char.image, char.name, 'w-full h-48 object-cover object-top')}
                     <div class="p-4">
                         <div class="flex items-start justify-between gap-2">
-                            <h3 class="font-bold text-lg text-white truncate">${char.name}</h3>
-                            <div class="shrink-0 flex gap-1"><button title="Inventario" onclick="event.stopPropagation(); openInventoryModal('${char.id}')" class="bg-red-950/70 hover:bg-red-900 border border-red-700 rounded-lg px-2 py-1 text-sm">⚔️</button><button title="Mente" onclick="event.stopPropagation(); openMentalModal('${char.id}')" class="bg-purple-950/70 hover:bg-purple-900 border border-purple-700 rounded-lg px-2 py-1 text-sm">🧠</button></div>
+                            <h3 class="font-bold text-lg text-white truncate">${getDisplayName(char)}</h3>
+                            <div class="shrink-0 flex gap-1"><button title="Inventario" onclick="event.stopPropagation(); openInventoryModal('${char.id}')" class="bg-red-950/70 hover:bg-red-900 border border-red-700 rounded-lg px-2 py-1 text-sm">⚔️</button><button title="Mente" onclick="event.stopPropagation(); openMentalModal('${char.id}')" class="bg-purple-950/70 hover:bg-purple-900 border border-purple-700 rounded-lg px-2 py-1 text-sm">🧠</button><button title="Mundo" onclick="event.stopPropagation(); openWorldModal('${char.id}')" class="bg-emerald-950/70 hover:bg-emerald-900 border border-emerald-700 rounded-lg px-2 py-1 text-sm">🌎</button><button title="Destino" onclick="event.stopPropagation(); openDestinyModal('${char.id}')" class="bg-sky-950/70 hover:bg-sky-900 border border-sky-700 rounded-lg px-2 py-1 text-sm">🔮</button></div>
                         </div>
                         <p class="text-sm text-primary mb-2">Nivel ${char.level} | ${char.battles} Batallas | ⚔️ ${inventoryCount} | 🧠 ${mentalCount}</p>
                         <div class="flex gap-2 text-xs">
-                            <span class="text-blue-400">INT: ${char.stats.INT}</span>
-                            <span class="text-red-400">FZA: ${char.stats.STR}</span>
-                            <span class="text-yellow-400">VEL: ${char.stats.SPD}</span>
-                            <span class="text-purple-400">MAG: ${char.stats.MAG}</span>
+                            <span class="text-blue-400">INT: ${getDisplayedStat(char, 'INT')}</span>
+                            <span class="text-red-400">FZA: ${getDisplayedStat(char, 'STR')}</span>
+                            <span class="text-yellow-400">VEL: ${getDisplayedStat(char, 'SPD')}</span>
+                            <span class="text-purple-400">MAG: ${getDisplayedStat(char, 'MAG')}</span>
                         </div>
                     </div>
                 `;
@@ -663,7 +772,7 @@
             if (!char) return;
             currentCharId = id;
 
-            document.getElementById('modal-name').innerText = char.name;
+            document.getElementById('modal-name').innerText = getDisplayName(char);
             const modalImageFrame = document.getElementById('modal-img');
             modalImageFrame.outerHTML = getImageHtml(char.image, char.name, 'w-full h-64 object-cover rounded-lg border border-gray-700 shadow-md', 'modal-img');
             document.getElementById('modal-level').innerText = char.level;
@@ -733,7 +842,7 @@
             container.innerHTML = '';
             
             ATTRS.forEach(attr => {
-                const val = char.stats[attr.key];
+                const val = getDisplayedStat(char, attr.key);
                 const pct = Math.min((val / char.cap) * 100, 100);
                 const isCapped = val >= char.cap;
                 const btText = isCapped ? `<span class="text-xs text-yellow-500 ml-2">(B-Through: ${char.breakthroughPoints[attr.key]}/5)</span>` : '';
@@ -828,6 +937,8 @@
                     alert(`¡${char.name} ha ROTO SU LÍMITE en ${posAttr} y ha subido a NIVEL ${char.level}! Su nuevo tope es ${char.cap}.`);
                 }
             }
+
+            enforceDestinyStats(char);
 
             // Reset points
             char.points.pos = 0;
@@ -1100,6 +1211,102 @@
             saveState(); openMentalModal(char.id);
         }
 
+
+
+        let currentWorldCharId = null;
+        let currentDestinyCharId = null;
+
+        function openWorldModal(charId) {
+            const char = state.characters.find(c => c.id === charId);
+            if (!char) return;
+            currentWorldCharId = charId;
+            char.world = normalizeWorldStatus(char.world);
+            document.getElementById('world-title').innerText = `🌎 Mundo de ${getDisplayName(char)}`;
+            document.getElementById('world-title-input').value = char.world.title;
+            document.getElementById('world-companions').innerHTML = rosterOptionsHtml(char.world.companions, char.id);
+            document.getElementById('world-mission-offense').value = char.world.missionOffense;
+            document.getElementById('world-mission-protect').value = char.world.missionProtect;
+            document.getElementById('world-debt-target').value = char.world.debtTarget;
+            document.getElementById('world-debt-active').value = String(char.world.debtActive);
+            renderWorldSummary(char);
+            document.getElementById('world-modal').classList.remove('hidden');
+        }
+
+        function closeWorldModal() {
+            document.getElementById('world-modal').classList.add('hidden');
+            currentWorldCharId = null;
+        }
+
+        function renderWorldSummary(char) {
+            const world = normalizeWorldStatus(char.world);
+            const companions = world.companions.map(id => state.characters.find(c => c.id === id)).filter(Boolean);
+            const sameClan = getTeamClanIds([char, ...companions]);
+            document.getElementById('world-summary').innerHTML = `
+                <article class="rounded-xl border border-emerald-700/50 bg-emerald-950/20 p-4"><h4 class="font-bold text-emerald-200 mb-2">Compañeros y Clan</h4><p>Compañeros: ${companions.map(getDisplayName).map(escapeHtml).join(', ') || '—'}</p><p class="mt-2">Clan validado: ${sameClan.has(char.id) ? 'Sí, triángulo de lealtad detectado (+25)' : 'No, falta un triángulo completo'}</p></article>
+                <article class="rounded-xl border border-yellow-700/50 bg-yellow-950/20 p-4"><h4 class="font-bold text-yellow-200 mb-2">Estatus activo</h4><p>Apodo: ${escapeHtml(world.title || '—')}</p><p>Misión ofensiva: ${escapeHtml(world.missionOffense || '—')}</p><p>Misión defensiva: ${escapeHtml(world.missionProtect || '—')}</p><p>Deuda: ${world.debtActive ? `Activa contra ${escapeHtml(world.debtTarget)}` : 'Saldada o sin configurar'}</p></article>`;
+        }
+
+        document.getElementById('world-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const char = state.characters.find(c => c.id === currentWorldCharId);
+            if (!char) return;
+            char.world = normalizeWorldStatus({
+                title: document.getElementById('world-title-input').value.trim(),
+                companions: Array.from(document.getElementById('world-companions').selectedOptions).map(o => o.value),
+                missionOffense: document.getElementById('world-mission-offense').value.trim(),
+                missionProtect: document.getElementById('world-mission-protect').value.trim(),
+                debtTarget: document.getElementById('world-debt-target').value.trim(),
+                debtActive: document.getElementById('world-debt-active').value === 'true'
+            });
+            saveState();
+            openWorldModal(char.id);
+        });
+
+        function hydrateDestinyAttrOptions() {
+            const html = ATTRS.map(a => `<option value="${a.key}">${a.name}</option>`).join('');
+            document.getElementById('destiny-curse').innerHTML = '<option value="">Sin maldición</option>' + html;
+            document.getElementById('destiny-blessing').innerHTML = '<option value="">Sin bendición</option>' + html;
+            document.getElementById('destiny-oath-attr').innerHTML = html;
+        }
+
+        function openDestinyModal(charId) {
+            const char = state.characters.find(c => c.id === charId);
+            if (!char) return;
+            currentDestinyCharId = charId;
+            char.destiny = normalizeDestiny(char.destiny);
+            hydrateDestinyAttrOptions();
+            document.getElementById('destiny-title').innerText = `🔮 Destino de ${getDisplayName(char)}`;
+            document.getElementById('destiny-curse').value = char.destiny.curseAttr;
+            document.getElementById('destiny-blessing').value = char.destiny.blessingAttr;
+            document.getElementById('destiny-oath-path').value = char.destiny.oathPath;
+            document.getElementById('destiny-oath-attr').value = char.destiny.oathAttr;
+            document.getElementById('destiny-oath-name').value = char.destiny.oathName;
+            document.getElementById('destiny-notes').value = char.destiny.notes;
+            document.getElementById('destiny-modal').classList.remove('hidden');
+        }
+
+        function closeDestinyModal() {
+            document.getElementById('destiny-modal').classList.add('hidden');
+            currentDestinyCharId = null;
+        }
+
+        document.getElementById('destiny-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const char = state.characters.find(c => c.id === currentDestinyCharId);
+            if (!char) return;
+            char.destiny = normalizeDestiny({
+                curseAttr: document.getElementById('destiny-curse').value,
+                blessingAttr: document.getElementById('destiny-blessing').value,
+                oathPath: document.getElementById('destiny-oath-path').value,
+                oathAttr: document.getElementById('destiny-oath-attr').value,
+                oathName: document.getElementById('destiny-oath-name').value.trim(),
+                notes: document.getElementById('destiny-notes').value.trim()
+            });
+            enforceDestinyStats(char);
+            saveState();
+            openDestinyModal(char.id);
+        });
+
         function updateBattleButton() {
             const btn = document.getElementById('btn-start-battle');
             if (state.characters.length < 8) {
@@ -1140,7 +1347,7 @@
             const blueTeam = fightersIds.slice(4, 8).map(id => state.characters.find(c => c.id === id));
 
             // Setup current battle state
-            currentBattle = { redTeam, blueTeam, redWins: 0, blueWins: 0, duelsFought: 0 };
+            currentBattle = { redTeam, blueTeam, redWins: 0, blueWins: 0, duelsFought: 0, duelResults: [] };
             
             renderTeam('red-corner', redTeam);
             renderTeam('blue-corner', blueTeam);
@@ -1160,12 +1367,12 @@
                             <div class="card-front backface-hidden bg-card border border-gray-700 flex flex-col">
                                 ${getImageHtml(char.image, char.name, 'w-full h-24 object-cover rounded-t-lg')}
                                 <div class="p-2 text-center flex-1 flex flex-col justify-between">
-                                    <h4 class="text-xs font-bold truncate text-white">${char.name}</h4>
+                                    <h4 class="text-xs font-bold truncate text-white">${getDisplayName(char)}</h4>
                                     <div class="grid grid-cols-2 gap-1 text-[10px] mt-1">
-                                        <div class="bg-gray-800 rounded text-blue-400">IN ${char.stats.INT}</div>
-                                        <div class="bg-gray-800 rounded text-red-400">FZ ${char.stats.STR}</div>
-                                        <div class="bg-gray-800 rounded text-yellow-400">VL ${char.stats.SPD}</div>
-                                        <div class="bg-gray-800 rounded text-purple-400">MG ${char.stats.MAG}</div>
+                                        <div class="bg-gray-800 rounded text-blue-400">IN ${getDisplayedStat(char, 'INT')}</div>
+                                        <div class="bg-gray-800 rounded text-red-400">FZ ${getDisplayedStat(char, 'STR')}</div>
+                                        <div class="bg-gray-800 rounded text-yellow-400">VL ${getDisplayedStat(char, 'SPD')}</div>
+                                        <div class="bg-gray-800 rounded text-purple-400">MG ${getDisplayedStat(char, 'MAG')}</div>
                                     </div>
                                 </div>
                             </div>
@@ -1195,11 +1402,24 @@
 
         function getEffectiveStat(char, attrKey, opponent, allies = [], enemies = []) {
             let base = Number(char.stats[attrKey] || 0);
+            const world = normalizeWorldStatus(char.world);
+            const destiny = normalizeDestiny(char.destiny);
+            const clanIds = getTeamClanIds(allies);
+            if (destiny.blessingAttr === attrKey) base = 100;
+            if (destiny.curseAttr === attrKey) return 0;
             let additive = 0;
             let percentBuff = 0;
             let percentReduction = 0;
             let protectedSpeedBuff = 0;
             const hasRefuge = (char.equipment || []).some(eq => normalizeEquipment(eq).type === 'Refugio / Territorio');
+
+            if (clanIds.has(char.id)) additive += 25;
+            else additive += allies.filter(ally => ally.id !== char.id && areCompanions(char, ally)).length * 10;
+            if (world.missionOffense && characterMatchesQuery(opponent, world.missionOffense)) additive += 15;
+            if (world.missionProtect && enemies.some(enemy => characterMatchesQuery(enemy, world.missionProtect))) additive -= 20;
+            if (world.debtActive) additive -= 5;
+            if (destiny.oathAttr === attrKey && destiny.oathPath === 'risk') additive += 40;
+            if (destiny.oathAttr === attrKey && destiny.oathPath === 'overcome') additive -= 40;
 
             (char.mental || []).map(normalizeMentalMilestone).forEach(item => {
                 const isTriggered = entryMatches(item.trigger, opponent);
@@ -1270,8 +1490,10 @@
                 currentBattle.duelsFought++;
                 const redChar = redTeam[i];
                 const blueChar = blueTeam[i];
-                const redVal = getEffectiveStat(redChar, attr.key, blueChar, redTeam, blueTeam);
-                const blueVal = getEffectiveStat(blueChar, attr.key, redChar, blueTeam, redTeam);
+                let redVal = getEffectiveStat(redChar, attr.key, blueChar, redTeam, blueTeam);
+                let blueVal = getEffectiveStat(blueChar, attr.key, redChar, blueTeam, redTeam);
+                if (normalizeWorldStatus(redChar.world).title && redChar.level > blueChar.level) blueVal = Math.max(0, blueVal - 10);
+                if (normalizeWorldStatus(blueChar.world).title && blueChar.level > redChar.level) redVal = Math.max(0, redVal - 10);
 
                 logBattle(`Duelo ${i+1}: Evaluando ${attr.name}...`);
                 await sleep(1000);
@@ -1283,14 +1505,17 @@
 
                 if (redVal > blueVal) {
                     currentBattle.redWins++;
-                    logBattle(`🥊 ${redChar.name} (${redVal}) vence a ${blueChar.name} (${blueVal}). Punto ROJO.`);
+                    currentBattle.duelResults.push({ attr: attr.key, winnerId: redChar.id, loserId: blueChar.id });
+                    logBattle(`🥊 ${getDisplayName(redChar)} (${redVal}) vence a ${getDisplayName(blueChar)} (${blueVal}). Punto ROJO.`);
                 } else if (blueVal > redVal) {
                     currentBattle.blueWins++;
-                    logBattle(`🥊 ${blueChar.name} (${blueVal}) vence a ${redChar.name} (${redVal}). Punto AZUL.`);
+                    currentBattle.duelResults.push({ attr: attr.key, winnerId: blueChar.id, loserId: redChar.id });
+                    logBattle(`🥊 ${getDisplayName(blueChar)} (${blueVal}) vence a ${getDisplayName(redChar)} (${redVal}). Punto AZUL.`);
                 } else {
                     // Tie in duel goes to random
                     const redWon = Math.random() > 0.5;
                     if(redWon) currentBattle.redWins++; else currentBattle.blueWins++;
+                    currentBattle.duelResults.push({ attr: attr.key, winnerId: redWon ? redChar.id : blueChar.id, loserId: redWon ? blueChar.id : redChar.id });
                     logBattle(`🥊 Empate en ${attr.name} (${redVal}). Moneda decide: Punto ${redWon ? 'ROJO' : 'AZUL'}.`);
                 }
                 
@@ -1346,6 +1571,21 @@
                 lChar.points.neg++;
                 if (lChar.battles % 20 === 0) queueMilestone(lChar);
             }
+
+            // Process supernatural oath consequences and debt resolutions by individual duel.
+            (currentBattle.duelResults || []).forEach(result => {
+                const winner = state.characters.find(c => c.id === result.winnerId);
+                const loser = state.characters.find(c => c.id === result.loserId);
+                [winner, loser].filter(Boolean).forEach(char => {
+                    const destiny = normalizeDestiny(char.destiny);
+                    if (destiny.oathAttr === result.attr && destiny.oathPath === 'risk' && char.id === result.loserId) char.points.neg += 5;
+                    if (destiny.oathAttr === result.attr && destiny.oathPath === 'overcome' && char.id === result.winnerId) char.points.pos += 5;
+                });
+                if (winner) {
+                    const world = normalizeWorldStatus(winner.world);
+                    if (world.debtActive && loser && characterMatchesQuery(loser, world.debtTarget)) winner.world = { ...world, debtActive: false };
+                }
+            });
 
             // Process Relationships (Allies and Rivals) only for those who fought
             const actualRed = currentBattle.redTeam.slice(0, participantsCount);
