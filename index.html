@@ -63,6 +63,7 @@
         .silhouette { background: radial-gradient(circle at 50% 22%, #4b5563 0 13%, transparent 14%), radial-gradient(circle at 50% 82%, #374151 0 34%, transparent 35%), linear-gradient(135deg, #111827, #1f2937); }
         .hidden { display: none !important; }
         .inventory-input { width: 100%; background: #121212; border: 1px solid #374151; border-radius: 0.5rem; padding: 0.5rem; color: white; font-size: 0.875rem; }
+        .mental-input { width: 100%; background: #121212; border: 1px solid #374151; border-radius: 0.5rem; padding: 0.5rem; color: white; font-size: 0.875rem; }
         .inventory-label { display: block; font-size: 0.75rem; color: #9ca3af; margin-bottom: 0.25rem; }
     </style>
 </head>
@@ -201,7 +202,10 @@
                             <span class="block text-xs text-gray-400 uppercase">Nivel</span>
                             <span id="modal-level" class="text-2xl font-bold text-primary"></span>
                         </div>
-                        <button onclick="openInventoryModal(currentCharId)" class="mt-4 w-full bg-red-950/70 hover:bg-red-900 border border-red-700 text-white font-bold py-2 rounded-lg transition">⚔️ Inventario</button>
+                        <div class="mt-4 grid grid-cols-2 gap-2">
+                            <button onclick="openInventoryModal(currentCharId)" class="w-full bg-red-950/70 hover:bg-red-900 border border-red-700 text-white font-bold py-2 rounded-lg transition">⚔️ Inventario</button>
+                            <button onclick="openMentalModal(currentCharId)" class="w-full bg-purple-950/70 hover:bg-purple-900 border border-purple-700 text-white font-bold py-2 rounded-lg transition">🧠 Mente</button>
+                        </div>
                         <div class="mt-4 bg-gray-900/70 rounded-lg border border-gray-700 p-4">
                             <h4 class="text-xs font-bold uppercase tracking-[0.2em] text-white mb-3">Atributos principales</h4>
                             <div id="modal-stats" class="grid grid-cols-1 gap-3">
@@ -300,6 +304,30 @@
                 <div class="bg-emerald-950/30 border border-emerald-700/50 rounded-xl p-4 text-sm text-emerald-100">
                     <strong>Reglas inquebrantables:</strong> las Monturas/Vehículos solo aumentan Velocidad y su bono no puede anularse ni reducirse. El Refugio/Territorio limita cualquier reducción total de atributos del personaje a un máximo del 15%.
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mental / Personal Development Modal -->
+    <div id="mental-modal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4 modal-overlay">
+        <div class="bg-card w-full max-w-5xl rounded-xl shadow-2xl border border-purple-700/60 overflow-hidden flex flex-col max-h-[92vh]">
+            <div class="flex justify-between items-center p-4 border-b border-gray-800 bg-gray-900">
+                <div>
+                    <h3 id="mental-title" class="text-xl font-bold">🧠 Desarrollo</h3>
+                    <p class="text-xs text-gray-400 mt-1">Acontecimiento, Sabiduría, Miedo, Debilidad y Mutación como estados permanentes del personaje.</p>
+                </div>
+                <button onclick="closeMentalModal()" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+            </div>
+            <div class="flex-1 overflow-y-auto p-6 space-y-6">
+                <form id="mental-form" class="bg-purple-950/20 border border-purple-700/50 rounded-xl p-4">
+                    <div class="flex items-center justify-between gap-3 mb-4"><div><h4 class="font-bold text-white">Crear o editar hito mental</h4><p class="text-xs text-gray-500">Configura redistribuciones, detonantes de miedo y agravantes de debilidad.</p></div><button type="button" onclick="resetMentalForm()" class="bg-gray-800 hover:bg-gray-700 text-xs font-bold px-3 py-2 rounded-lg border border-gray-600">Limpiar</button></div>
+                    <input type="hidden" id="mental-id">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4"><div><label class="inventory-label">Tipo</label><select id="mental-type" class="mental-input" onchange="syncMentalFormByType()"><option>Acontecimiento</option><option>Sabiduría / Revelación</option><option>Miedo / Trauma</option><option>Debilidad</option><option>Mutación</option></select></div><div><label class="inventory-label">Nombre</label><input id="mental-name" required placeholder="Ej: Noche del Abismo" class="mental-input"></div><div><label class="inventory-label">Valor X / porcentaje agravado</label><input id="mental-value" type="number" value="25" class="mental-input"></div></div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4"><div><label class="inventory-label">Atributo que aumenta</label><select id="mental-plus" class="mental-input"></select></div><div><label class="inventory-label">Atributo que disminuye</label><select id="mental-minus" class="mental-input"></select></div><div><label class="inventory-label">Detonante del Miedo</label><input id="mental-trigger" placeholder="Nombre o tipo: dragón, Carlos..." class="mental-input"></div><div><label class="inventory-label">Agravante de Debilidad</label><input id="mental-aggravator" placeholder="Contra quién se activa" class="mental-input"></div></div>
+                    <textarea id="mental-notes" rows="2" placeholder="Descripción narrativa del estado mental o físico..." class="mental-input mt-4"></textarea>
+                    <button class="mt-4 w-full bg-purple-700 hover:bg-purple-600 text-white font-bold py-2 rounded-lg">Guardar hito mental</button>
+                </form>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4" id="mental-list"></div>
             </div>
         </div>
     </div>
@@ -406,6 +434,7 @@
                     char.pendingAction = null;
                 }
                 char.equipment = (char.equipment || []).map(normalizeEquipment);
+                char.mental = (char.mental || []).map(normalizeMentalMilestone);
             });
             
             // Render initial view
@@ -510,6 +539,25 @@
             };
         }
 
+
+        function normalizeMentalMilestone(item = {}) {
+            return {
+                id: item.id || generateId(),
+                type: item.type || 'Acontecimiento',
+                name: item.name || 'Sin nombre',
+                value: Number(item.value || 25),
+                plusAttr: item.plusAttr || 'INT',
+                minusAttr: item.minusAttr || 'STR',
+                trigger: item.trigger || '',
+                aggravator: item.aggravator || '',
+                notes: item.notes || ''
+            };
+        }
+
+        function isMentalMilestone(type) {
+            return ['Acontecimiento', 'Sabiduría / Revelación', 'Miedo / Trauma', 'Debilidad', 'Mutación', 'Mutación / Marca Física'].includes(type);
+        }
+
         function isEquipmentMilestone(type) {
             return ['Arma', 'Armadura', 'Artefacto / Reliquia', 'Montura / Vehículo', 'Refugio / Territorio'].includes(type);
         }
@@ -554,6 +602,7 @@
                 battles: 0,
                 milestones: [],
                 equipment: [],
+                mental: [],
                 pendingMilestones: 0,
                 pendingAction: null // 'points'
             };
@@ -585,15 +634,16 @@
                 card.className = 'char-card bg-card border border-gray-800 rounded-xl overflow-hidden relative cursor-pointer';
                 card.onclick = () => openCharModal(char.id);
                 const inventoryCount = (char.equipment || []).length;
+                const mentalCount = (char.mental || []).length;
                 card.innerHTML = `
                     ${badges}
                     ${getImageHtml(char.image, char.name, 'w-full h-48 object-cover object-top')}
                     <div class="p-4">
                         <div class="flex items-start justify-between gap-2">
                             <h3 class="font-bold text-lg text-white truncate">${char.name}</h3>
-                            <button title="Inventario" onclick="event.stopPropagation(); openInventoryModal('${char.id}')" class="shrink-0 bg-red-950/70 hover:bg-red-900 border border-red-700 rounded-lg px-2 py-1 text-sm">⚔️</button>
+                            <div class="shrink-0 flex gap-1"><button title="Inventario" onclick="event.stopPropagation(); openInventoryModal('${char.id}')" class="bg-red-950/70 hover:bg-red-900 border border-red-700 rounded-lg px-2 py-1 text-sm">⚔️</button><button title="Mente" onclick="event.stopPropagation(); openMentalModal('${char.id}')" class="bg-purple-950/70 hover:bg-purple-900 border border-purple-700 rounded-lg px-2 py-1 text-sm">🧠</button></div>
                         </div>
-                        <p class="text-sm text-primary mb-2">Nivel ${char.level} | ${char.battles} Batallas | ⚔️ ${inventoryCount}</p>
+                        <p class="text-sm text-primary mb-2">Nivel ${char.level} | ${char.battles} Batallas | ⚔️ ${inventoryCount} | 🧠 ${mentalCount}</p>
                         <div class="flex gap-2 text-xs">
                             <span class="text-blue-400">INT: ${char.stats.INT}</span>
                             <span class="text-red-400">FZA: ${char.stats.STR}</span>
@@ -812,6 +862,10 @@
                 char.equipment = char.equipment || [];
                 char.equipment.push(normalizeEquipment({ type, name, image, notes: description, attr: type === 'Montura / Vehículo' ? 'SPD' : 'STR', mode: type === 'Refugio / Territorio' ? 'buff' : 'add' }));
             }
+            if (isMentalMilestone(type)) {
+                char.mental = char.mental || [];
+                char.mental.push(normalizeMentalMilestone({ type: type === 'Mutación / Marca Física' ? 'Mutación' : type, name, notes: description }));
+            }
             char.pendingMilestones = Math.max(0, (char.pendingMilestones || 0) - 1);
             if (char.pendingAction !== 'points') char.pendingAction = null;
 
@@ -945,6 +999,107 @@
             openInventoryModal(char.id);
         }
 
+
+        let currentMentalCharId = null;
+
+        function openMentalModal(charId) {
+            const char = state.characters.find(c => c.id === charId);
+            if (!char) return;
+            currentMentalCharId = charId;
+            char.mental = char.mental || [];
+            document.getElementById('mental-title').innerText = `🧠 Desarrollo de ${char.name}`;
+            hydrateMentalAttrOptions();
+            resetMentalForm(false);
+            renderMentalList(char);
+            document.getElementById('mental-modal').classList.remove('hidden');
+        }
+
+        function closeMentalModal() {
+            document.getElementById('mental-modal').classList.add('hidden');
+            currentMentalCharId = null;
+        }
+
+        function hydrateMentalAttrOptions() {
+            const html = ATTRS.map(a => `<option value="${a.key}">${a.name}</option>`).join('');
+            document.getElementById('mental-plus').innerHTML = html;
+            document.getElementById('mental-minus').innerHTML = html;
+        }
+
+        function resetMentalForm(clearId = true) {
+            document.getElementById('mental-form').reset();
+            if (clearId) document.getElementById('mental-id').value = '';
+            document.getElementById('mental-value').value = 25;
+            syncMentalFormByType();
+        }
+
+        function syncMentalFormByType() {
+            const type = document.getElementById('mental-type').value;
+            const value = document.getElementById('mental-value');
+            const plus = document.getElementById('mental-plus');
+            const minus = document.getElementById('mental-minus');
+            [value, plus, minus, document.getElementById('mental-trigger'), document.getElementById('mental-aggravator')].forEach(el => el.disabled = false);
+            if (type === 'Sabiduría / Revelación') { value.value = 25; plus.value = 'INT'; value.disabled = true; plus.disabled = true; minus.disabled = true; }
+            if (type === 'Miedo / Trauma') { value.value = 50; value.disabled = true; plus.disabled = true; minus.disabled = true; }
+            if (type === 'Acontecimiento') value.value = 25;
+            if (type === 'Debilidad') { value.value = 25; plus.disabled = true; }
+        }
+
+        document.getElementById('mental-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const char = state.characters.find(c => c.id === currentMentalCharId);
+            if (!char) return;
+            char.mental = char.mental || [];
+            const type = document.getElementById('mental-type').value;
+            const item = normalizeMentalMilestone({
+                id: document.getElementById('mental-id').value || generateId(),
+                type,
+                name: document.getElementById('mental-name').value.trim(),
+                value: type === 'Sabiduría / Revelación' ? 25 : (type === 'Miedo / Trauma' ? 50 : document.getElementById('mental-value').value),
+                plusAttr: type === 'Sabiduría / Revelación' ? 'INT' : document.getElementById('mental-plus').value,
+                minusAttr: document.getElementById('mental-minus').value,
+                trigger: document.getElementById('mental-trigger').value.trim(),
+                aggravator: document.getElementById('mental-aggravator').value.trim(),
+                notes: document.getElementById('mental-notes').value.trim()
+            });
+            if (!item.name) return alert('Debes nombrar el hito mental.');
+            const index = char.mental.findIndex(ms => ms.id === item.id);
+            if (index >= 0) char.mental[index] = item; else char.mental.push(item);
+            saveState();
+            openMentalModal(char.id);
+        });
+
+        function renderMentalList(char) {
+            const container = document.getElementById('mental-list');
+            const items = (char.mental || []).map(normalizeMentalMilestone);
+            if (items.length === 0) { container.innerHTML = '<div class="lg:col-span-2 text-gray-500 italic text-sm border border-dashed border-gray-700 rounded-xl p-6 text-center">Sin hitos mentales activos.</div>'; return; }
+            container.innerHTML = items.map(item => {
+                const plusName = ATTRS.find(a => a.key === item.plusAttr)?.name || item.plusAttr;
+                const minusName = ATTRS.find(a => a.key === item.minusAttr)?.name || item.minusAttr;
+                return `<article class="rounded-xl border p-4 ${getMilestoneColor(item.type)}"><p class="text-[10px] uppercase tracking-[0.18em] opacity-80">${escapeHtml(item.type)}</p><h5 class="font-bold text-lg">${escapeHtml(item.name)}</h5><p class="text-xs mt-2">${describeMentalEffect(item, plusName, minusName)}</p><p class="text-xs mt-2"><strong>Miedo:</strong> ${escapeHtml(item.trigger || '—')} · <strong>Agravante:</strong> ${escapeHtml(item.aggravator || '—')}</p>${item.notes ? `<p class="text-xs mt-3 opacity-90 whitespace-pre-line">${escapeHtml(item.notes)}</p>` : ''}<div class="flex gap-2 mt-4"><button onclick="editMental('${escapeAttr(item.id)}')" class="bg-black/20 hover:bg-black/30 border border-white/10 px-3 py-1 rounded text-xs font-bold">Editar</button><button onclick="deleteMental('${escapeAttr(item.id)}')" class="bg-red-950/70 hover:bg-red-900 border border-red-700 px-3 py-1 rounded text-xs font-bold">Eliminar</button></div></article>`;
+            }).join('');
+        }
+
+        function describeMentalEffect(item, plusName, minusName) {
+            if (item.type === 'Sabiduría / Revelación') return '+25 permanente en Inteligencia.';
+            if (item.type === 'Miedo / Trauma') return 'Reduce todos los atributos un 50% si aparece el detonante.';
+            if (item.type === 'Debilidad') return `-${item.value} en ${minusName}; puede agravarse contra objetivos configurados.`;
+            return `+${item.value} en ${plusName} y -${item.value} en ${minusName}.`;
+        }
+
+        function editMental(itemId) {
+            const char = state.characters.find(c => c.id === currentMentalCharId);
+            const item = (char?.mental || []).map(normalizeMentalMilestone).find(ms => ms.id === itemId);
+            if (!item) return;
+            document.getElementById('mental-id').value = item.id; document.getElementById('mental-type').value = item.type; document.getElementById('mental-name').value = item.name; document.getElementById('mental-value').value = item.value; document.getElementById('mental-plus').value = item.plusAttr; document.getElementById('mental-minus').value = item.minusAttr; document.getElementById('mental-trigger').value = item.trigger; document.getElementById('mental-aggravator').value = item.aggravator; document.getElementById('mental-notes').value = item.notes; syncMentalFormByType();
+        }
+
+        function deleteMental(itemId) {
+            const char = state.characters.find(c => c.id === currentMentalCharId);
+            if (!char || !confirm('¿Eliminar este hito mental?')) return;
+            char.mental = (char.mental || []).filter(ms => ms.id !== itemId);
+            saveState(); openMentalModal(char.id);
+        }
+
         function updateBattleButton() {
             const btn = document.getElementById('btn-start-battle');
             if (state.characters.length < 8) {
@@ -1045,6 +1200,21 @@
             let percentReduction = 0;
             let protectedSpeedBuff = 0;
             const hasRefuge = (char.equipment || []).some(eq => normalizeEquipment(eq).type === 'Refugio / Territorio');
+
+            (char.mental || []).map(normalizeMentalMilestone).forEach(item => {
+                const isTriggered = entryMatches(item.trigger, opponent);
+                const isAggravated = entryMatches(item.aggravator, opponent);
+                if (item.type === 'Acontecimiento' || item.type === 'Mutación') {
+                    if (item.plusAttr === attrKey) additive += item.value;
+                    if (item.minusAttr === attrKey) additive -= item.value;
+                }
+                if (item.type === 'Sabiduría / Revelación' && attrKey === 'INT') additive += 25;
+                if (item.type === 'Miedo / Trauma' && isTriggered) percentReduction += 50;
+                if (item.type === 'Debilidad' && item.minusAttr === attrKey) {
+                    if (isAggravated) percentReduction += Math.max(item.value, 0);
+                    else additive -= 25;
+                }
+            });
 
             (char.equipment || []).map(normalizeEquipment).forEach(item => {
                 if (item.attr !== attrKey && item.type !== 'Refugio / Territorio') return;
