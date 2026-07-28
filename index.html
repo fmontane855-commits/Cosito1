@@ -62,6 +62,8 @@
         .modal-overlay { background: rgba(0,0,0,0.8); backdrop-filter: blur(4px); }
         .silhouette { background: radial-gradient(circle at 50% 22%, #4b5563 0 13%, transparent 14%), radial-gradient(circle at 50% 82%, #374151 0 34%, transparent 35%), linear-gradient(135deg, #111827, #1f2937); }
         .hidden { display: none !important; }
+        .inventory-input { width: 100%; background: #121212; border: 1px solid #374151; border-radius: 0.5rem; padding: 0.5rem; color: white; font-size: 0.875rem; }
+        .inventory-label { display: block; font-size: 0.75rem; color: #9ca3af; margin-bottom: 0.25rem; }
     </style>
 </head>
 <body class="bg-darker min-h-screen text-gray-200">
@@ -199,6 +201,7 @@
                             <span class="block text-xs text-gray-400 uppercase">Nivel</span>
                             <span id="modal-level" class="text-2xl font-bold text-primary"></span>
                         </div>
+                        <button onclick="openInventoryModal(currentCharId)" class="mt-4 w-full bg-red-950/70 hover:bg-red-900 border border-red-700 text-white font-bold py-2 rounded-lg transition">⚔️ Inventario</button>
                         <div class="mt-4 bg-gray-900/70 rounded-lg border border-gray-700 p-4">
                             <h4 class="text-xs font-bold uppercase tracking-[0.2em] text-white mb-3">Atributos principales</h4>
                             <div id="modal-stats" class="grid grid-cols-1 gap-3">
@@ -248,6 +251,54 @@
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Inventory / Equipment Modal -->
+    <div id="inventory-modal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4 modal-overlay">
+        <div class="bg-card w-full max-w-5xl rounded-xl shadow-2xl border border-gray-700 overflow-hidden flex flex-col max-h-[92vh]">
+            <div class="flex justify-between items-center p-4 border-b border-gray-800 bg-gray-900">
+                <div>
+                    <h3 id="inventory-title" class="text-xl font-bold">⚔️ Inventario</h3>
+                    <p class="text-xs text-gray-400 mt-1">Equipamiento, reliquias, monturas y territorios con reglas personalizables.</p>
+                </div>
+                <button onclick="closeInventoryModal()" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+            </div>
+            <div class="flex-1 overflow-y-auto p-6 space-y-6">
+                <form id="equipment-form" class="bg-gray-900/70 border border-gray-700 rounded-xl p-4">
+                    <div class="flex items-center justify-between gap-3 mb-4">
+                        <div>
+                            <h4 class="font-bold text-white">Crear o editar posesión</h4>
+                            <p class="text-xs text-gray-500">El usuario define potencia, excepciones, afinidades y condicionales libremente.</p>
+                        </div>
+                        <button type="button" onclick="resetEquipmentForm()" class="bg-gray-800 hover:bg-gray-700 text-xs font-bold px-3 py-2 rounded-lg border border-gray-600">Limpiar</button>
+                    </div>
+                    <input type="hidden" id="eq-id">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div><label class="inventory-label">Tipo</label><select id="eq-type" class="inventory-input" onchange="syncEquipmentFormByType()"><option>Arma</option><option>Armadura</option><option>Artefacto / Reliquia</option><option>Montura / Vehículo</option><option>Refugio / Territorio</option></select></div>
+                        <div><label class="inventory-label">Nombre</label><input id="eq-name" required placeholder="Ej: Espada del Alba" class="inventory-input"></div>
+                        <div><label class="inventory-label">Imagen del objeto</label><input id="eq-image" placeholder="URL de imagen opcional" class="inventory-input"></div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
+                        <div><label class="inventory-label">Atributo principal</label><select id="eq-attr" class="inventory-input"><option value="INT">Inteligencia</option><option value="STR">Fuerza</option><option value="SPD">Velocidad</option><option value="MAG">Magia</option></select></div>
+                        <div><label class="inventory-label">Potencia base</label><input id="eq-power" type="number" value="0" class="inventory-input"></div>
+                        <div><label class="inventory-label">Modo</label><select id="eq-mode" class="inventory-input"><option value="add">Sumar puntos</option><option value="buff">Aumentar %</option><option value="debuff">Disminuir %</option></select></div>
+                        <div><label class="inventory-label">Objetivo</label><select id="eq-target" class="inventory-input"><option value="self">Propio</option><option value="ally">Aliados</option><option value="enemy">Rivales</option></select></div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                        <div><label class="inventory-label">Afinidad superior (+%) contra personajes o tipos</label><input id="eq-superior" placeholder="dragón +50%, Carlos +25%" class="inventory-input"></div>
+                        <div><label class="inventory-label">Afinidad inferior (-%) contra personajes o tipos</label><input id="eq-inferior" placeholder="fantasma -30%, Ana -10%" class="inventory-input"></div>
+                        <div><label class="inventory-label">Inmunidad / nunca funciona (0)</label><input id="eq-immune" placeholder="Lucía, no-muertos" class="inventory-input"></div>
+                        <div><label class="inventory-label">Condición de activación</label><input id="eq-condition" placeholder="Solo frente a demonios; nunca contra Elena" class="inventory-input"></div>
+                    </div>
+                    <textarea id="eq-notes" rows="2" placeholder="Reglas narrativas, excepciones o detalles caóticos de la reliquia..." class="inventory-input mt-4"></textarea>
+                    <button class="mt-4 w-full bg-primary hover:bg-indigo-600 text-white font-bold py-2 rounded-lg">Guardar posesión</button>
+                </form>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4" id="equipment-list"></div>
+                <div class="bg-emerald-950/30 border border-emerald-700/50 rounded-xl p-4 text-sm text-emerald-100">
+                    <strong>Reglas inquebrantables:</strong> las Monturas/Vehículos solo aumentan Velocidad y su bono no puede anularse ni reducirse. El Refugio/Territorio limita cualquier reducción total de atributos del personaje a un máximo del 15%.
                 </div>
             </div>
         </div>
@@ -354,6 +405,7 @@
                     char.pendingMilestones = Math.max(char.pendingMilestones, 1);
                     char.pendingAction = null;
                 }
+                char.equipment = (char.equipment || []).map(normalizeEquipment);
             });
             
             // Render initial view
@@ -389,6 +441,10 @@
 
         function escapeAttr(value) {
             return String(value || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        function escapeHtml(value) {
+            return String(value || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         }
 
         function getImageHtml(src, alt, classes, id = '') {
@@ -436,6 +492,28 @@
             };
         }
 
+        function normalizeEquipment(item = {}) {
+            return {
+                id: item.id || generateId(),
+                type: item.type || 'Arma',
+                name: item.name || 'Sin nombre',
+                image: item.image || '',
+                attr: item.attr || 'STR',
+                power: Number(item.power || 0),
+                mode: item.mode || 'add',
+                target: item.target || 'self',
+                superior: item.superior || '',
+                inferior: item.inferior || '',
+                immune: item.immune || '',
+                condition: item.condition || '',
+                notes: item.notes || ''
+            };
+        }
+
+        function isEquipmentMilestone(type) {
+            return ['Arma', 'Armadura', 'Artefacto / Reliquia', 'Montura / Vehículo', 'Refugio / Territorio'].includes(type);
+        }
+
         function milestoneOptionsHtml() {
             return MILESTONE_CATEGORIES.map(category => `
                 <optgroup label="${category.label}">
@@ -475,6 +553,7 @@
                 points: { pos: 0, neg: 0 },
                 battles: 0,
                 milestones: [],
+                equipment: [],
                 pendingMilestones: 0,
                 pendingAction: null // 'points'
             };
@@ -505,12 +584,16 @@
                 const card = document.createElement('div');
                 card.className = 'char-card bg-card border border-gray-800 rounded-xl overflow-hidden relative cursor-pointer';
                 card.onclick = () => openCharModal(char.id);
+                const inventoryCount = (char.equipment || []).length;
                 card.innerHTML = `
                     ${badges}
                     ${getImageHtml(char.image, char.name, 'w-full h-48 object-cover object-top')}
                     <div class="p-4">
-                        <h3 class="font-bold text-lg text-white truncate">${char.name}</h3>
-                        <p class="text-sm text-primary mb-2">Nivel ${char.level} | ${char.battles} Batallas</p>
+                        <div class="flex items-start justify-between gap-2">
+                            <h3 class="font-bold text-lg text-white truncate">${char.name}</h3>
+                            <button title="Inventario" onclick="event.stopPropagation(); openInventoryModal('${char.id}')" class="shrink-0 bg-red-950/70 hover:bg-red-900 border border-red-700 rounded-lg px-2 py-1 text-sm">⚔️</button>
+                        </div>
+                        <p class="text-sm text-primary mb-2">Nivel ${char.level} | ${char.battles} Batallas | ⚔️ ${inventoryCount}</p>
                         <div class="flex gap-2 text-xs">
                             <span class="text-blue-400">INT: ${char.stats.INT}</span>
                             <span class="text-red-400">FZA: ${char.stats.STR}</span>
@@ -723,12 +806,143 @@
                 return;
             }
 
-            char.milestones.push({ type, name, description, image });
+            const milestone = { type, name, description, image };
+            char.milestones.push(milestone);
+            if (isEquipmentMilestone(type)) {
+                char.equipment = char.equipment || [];
+                char.equipment.push(normalizeEquipment({ type, name, image, notes: description, attr: type === 'Montura / Vehículo' ? 'SPD' : 'STR', mode: type === 'Refugio / Territorio' ? 'buff' : 'add' }));
+            }
             char.pendingMilestones = Math.max(0, (char.pendingMilestones || 0) - 1);
             if (char.pendingAction !== 'points') char.pendingAction = null;
 
             saveState();
             openCharModal(char.id); // Refresh
+        }
+
+        let currentInventoryCharId = null;
+
+        function openInventoryModal(charId) {
+            const char = state.characters.find(c => c.id === charId);
+            if (!char) return;
+            currentInventoryCharId = charId;
+            char.equipment = char.equipment || [];
+            document.getElementById('inventory-title').innerText = `⚔️ Inventario de ${char.name}`;
+            resetEquipmentForm(false);
+            renderEquipmentList(char);
+            document.getElementById('inventory-modal').classList.remove('hidden');
+        }
+
+        function closeInventoryModal() {
+            document.getElementById('inventory-modal').classList.add('hidden');
+            currentInventoryCharId = null;
+        }
+
+        function resetEquipmentForm(clearId = true) {
+            document.getElementById('equipment-form').reset();
+            if (clearId) document.getElementById('eq-id').value = '';
+            document.getElementById('eq-power').value = 0;
+            syncEquipmentFormByType();
+        }
+
+        function syncEquipmentFormByType() {
+            const type = document.getElementById('eq-type').value;
+            const attr = document.getElementById('eq-attr');
+            const mode = document.getElementById('eq-mode');
+            const target = document.getElementById('eq-target');
+            attr.disabled = false; mode.disabled = false; target.disabled = false;
+            if (type === 'Arma') { attr.value = ['STR', 'MAG'].includes(attr.value) ? attr.value : 'STR'; mode.value = 'add'; target.value = 'self'; }
+            if (type === 'Armadura') { mode.value = 'add'; target.value = 'self'; }
+            if (type === 'Artefacto / Reliquia') { mode.disabled = false; target.disabled = false; }
+            if (type === 'Montura / Vehículo') { attr.value = 'SPD'; mode.value = 'buff'; target.value = 'self'; attr.disabled = true; }
+            if (type === 'Refugio / Territorio') { mode.value = 'buff'; target.value = 'self'; }
+        }
+
+        document.getElementById('equipment-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const char = state.characters.find(c => c.id === currentInventoryCharId);
+            if (!char) return;
+            char.equipment = char.equipment || [];
+            const item = normalizeEquipment({
+                id: document.getElementById('eq-id').value || generateId(),
+                type: document.getElementById('eq-type').value,
+                name: document.getElementById('eq-name').value.trim(),
+                image: document.getElementById('eq-image').value.trim(),
+                attr: document.getElementById('eq-type').value === 'Montura / Vehículo' ? 'SPD' : document.getElementById('eq-attr').value,
+                power: document.getElementById('eq-power').value,
+                mode: document.getElementById('eq-mode').value,
+                target: document.getElementById('eq-target').value,
+                superior: document.getElementById('eq-superior').value.trim(),
+                inferior: document.getElementById('eq-inferior').value.trim(),
+                immune: document.getElementById('eq-immune').value.trim(),
+                condition: document.getElementById('eq-condition').value.trim(),
+                notes: document.getElementById('eq-notes').value.trim()
+            });
+            if (!item.name) return alert('Debes nombrar la posesión.');
+            const index = char.equipment.findIndex(eq => eq.id === item.id);
+            if (index >= 0) char.equipment[index] = item; else char.equipment.push(item);
+            saveState();
+            openInventoryModal(char.id);
+        });
+
+        function renderEquipmentList(char) {
+            const container = document.getElementById('equipment-list');
+            const items = (char.equipment || []).map(normalizeEquipment);
+            if (items.length === 0) {
+                container.innerHTML = '<div class="lg:col-span-2 text-gray-500 italic text-sm border border-dashed border-gray-700 rounded-xl p-6 text-center">Sin equipamiento ni posesiones activas.</div>';
+                return;
+            }
+            container.innerHTML = items.map(item => {
+                const attrName = ATTRS.find(a => a.key === item.attr)?.name || item.attr;
+                const modeText = item.mode === 'add' ? `+${item.power} puntos a ${attrName}` : `${item.mode === 'buff' ? '+' : '-'}${item.power}% en ${attrName}`;
+                return `
+                    <article class="rounded-xl border p-4 ${getMilestoneColor(item.type)}">
+                        <div class="flex gap-3">
+                            ${item.image ? `<img src="${escapeAttr(item.image)}" alt="${escapeAttr(item.name)}" class="w-20 h-20 rounded-lg object-cover border border-white/10" onerror="this.remove()">` : '<div class="w-20 h-20 rounded-lg bg-black/20 border border-white/10 flex items-center justify-center text-3xl">⚔️</div>'}
+                            <div class="min-w-0 flex-1">
+                                <p class="text-[10px] uppercase tracking-[0.18em] opacity-80">${escapeHtml(item.type)}</p>
+                                <h5 class="font-bold text-lg truncate">${escapeHtml(item.name)}</h5>
+                                <p class="text-xs mt-1">${escapeHtml(modeText)} · objetivo: ${escapeHtml(item.target)}</p>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3 text-xs">
+                            <p><strong>Superior:</strong> ${escapeHtml(item.superior || '—')}</p><p><strong>Inferior:</strong> ${escapeHtml(item.inferior || '—')}</p>
+                            <p><strong>Inmunidad:</strong> ${escapeHtml(item.immune || '—')}</p><p><strong>Condición:</strong> ${escapeHtml(item.condition || '—')}</p>
+                        </div>
+                        ${item.notes ? `<p class="text-xs mt-3 opacity-90 whitespace-pre-line">${escapeHtml(item.notes)}</p>` : ''}
+                        <div class="flex gap-2 mt-4">
+                            <button onclick="editEquipment('${escapeAttr(item.id)}')" class="bg-black/20 hover:bg-black/30 border border-white/10 px-3 py-1 rounded text-xs font-bold">Editar</button>
+                            <button onclick="deleteEquipment('${escapeAttr(item.id)}')" class="bg-red-950/70 hover:bg-red-900 border border-red-700 px-3 py-1 rounded text-xs font-bold">Eliminar</button>
+                        </div>
+                    </article>`;
+            }).join('');
+        }
+
+        function editEquipment(itemId) {
+            const char = state.characters.find(c => c.id === currentInventoryCharId);
+            const item = (char?.equipment || []).map(normalizeEquipment).find(eq => eq.id === itemId);
+            if (!item) return;
+            document.getElementById('eq-id').value = item.id;
+            document.getElementById('eq-type').value = item.type;
+            document.getElementById('eq-name').value = item.name;
+            document.getElementById('eq-image').value = item.image;
+            document.getElementById('eq-attr').value = item.attr;
+            document.getElementById('eq-power').value = item.power;
+            document.getElementById('eq-mode').value = item.mode;
+            document.getElementById('eq-target').value = item.target;
+            document.getElementById('eq-superior').value = item.superior;
+            document.getElementById('eq-inferior').value = item.inferior;
+            document.getElementById('eq-immune').value = item.immune;
+            document.getElementById('eq-condition').value = item.condition;
+            document.getElementById('eq-notes').value = item.notes;
+            syncEquipmentFormByType();
+        }
+
+        function deleteEquipment(itemId) {
+            const char = state.characters.find(c => c.id === currentInventoryCharId);
+            if (!char || !confirm('¿Eliminar esta posesión?')) return;
+            char.equipment = (char.equipment || []).filter(eq => eq.id !== itemId);
+            saveState();
+            openInventoryModal(char.id);
         }
 
         function updateBattleButton() {
@@ -810,6 +1024,60 @@
             });
         }
 
+        function entryMatches(text, targetChar) {
+            const haystack = String(text || '').toLowerCase();
+            if (!haystack || !targetChar) return false;
+            return haystack.split(',').some(raw => {
+                const entry = raw.replace(/[+-]?\d+%?/g, '').trim();
+                return entry && targetChar.name.toLowerCase().includes(entry);
+            });
+        }
+
+        function firstPercent(text, fallback = 0) {
+            const match = String(text || '').match(/([+-]?\d+(?:\.\d+)?)\s*%?/);
+            return match ? Number(match[1]) : fallback;
+        }
+
+        function getEffectiveStat(char, attrKey, opponent, allies = [], enemies = []) {
+            let base = Number(char.stats[attrKey] || 0);
+            let additive = 0;
+            let percentBuff = 0;
+            let percentReduction = 0;
+            let protectedSpeedBuff = 0;
+            const hasRefuge = (char.equipment || []).some(eq => normalizeEquipment(eq).type === 'Refugio / Territorio');
+
+            (char.equipment || []).map(normalizeEquipment).forEach(item => {
+                if (item.attr !== attrKey && item.type !== 'Refugio / Territorio') return;
+                if (entryMatches(item.immune, opponent)) return;
+                let multiplier = 1;
+                if (entryMatches(item.superior, opponent)) multiplier += firstPercent(item.superior) / 100;
+                if (entryMatches(item.inferior, opponent)) multiplier -= firstPercent(item.inferior) / 100;
+                if (item.mode === 'add') additive += item.power * multiplier;
+                if (item.mode === 'buff') {
+                    if (item.type === 'Montura / Vehículo') protectedSpeedBuff += item.power;
+                    else percentBuff += item.power * multiplier;
+                }
+                if (item.mode === 'debuff') percentReduction += item.power * multiplier;
+            });
+
+            const applyArtifact = (item, affectedChar) => {
+                if (item.attr !== attrKey || entryMatches(item.immune, affectedChar)) return;
+                let multiplier = 1;
+                if (entryMatches(item.superior, affectedChar)) multiplier += firstPercent(item.superior) / 100;
+                if (entryMatches(item.inferior, affectedChar)) multiplier -= firstPercent(item.inferior) / 100;
+                if (item.mode === 'buff') percentBuff += item.power * multiplier;
+                if (item.mode === 'debuff') percentReduction += item.power * multiplier;
+                if (item.mode === 'add') additive += item.power * multiplier;
+            };
+
+            allies.flatMap(c => c.equipment || []).map(normalizeEquipment).filter(eq => eq.type === 'Artefacto / Reliquia' && eq.target === 'ally').forEach(eq => applyArtifact(eq, char));
+            enemies.flatMap(c => c.equipment || []).map(normalizeEquipment).filter(eq => eq.type === 'Artefacto / Reliquia' && eq.target === 'enemy').forEach(eq => applyArtifact(eq, char));
+
+            if (hasRefuge) percentReduction = Math.min(percentReduction, 15);
+            const result = (base + additive) * (1 + percentBuff / 100) * (1 - percentReduction / 100) * (1 + protectedSpeedBuff / 100);
+            return Math.max(1, Math.round(result));
+        }
+
         function logBattle(msg, isHighlight = false) {
             const logBox = document.getElementById('battle-log');
             const color = isHighlight ? 'text-white font-bold' : 'text-gray-300';
@@ -832,8 +1100,8 @@
                 currentBattle.duelsFought++;
                 const redChar = redTeam[i];
                 const blueChar = blueTeam[i];
-                const redVal = redChar.stats[attr.key];
-                const blueVal = blueChar.stats[attr.key];
+                const redVal = getEffectiveStat(redChar, attr.key, blueChar, redTeam, blueTeam);
+                const blueVal = getEffectiveStat(blueChar, attr.key, redChar, blueTeam, redTeam);
 
                 logBattle(`Duelo ${i+1}: Evaluando ${attr.name}...`);
                 await sleep(1000);
