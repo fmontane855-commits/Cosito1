@@ -67,6 +67,8 @@
         .world-input { width: 100%; background: #121212; border: 1px solid #374151; border-radius: 0.5rem; padding: 0.5rem; color: white; font-size: 0.875rem; }
         .destiny-input { width: 100%; background: #121212; border: 1px solid #374151; border-radius: 0.5rem; padding: 0.5rem; color: white; font-size: 0.875rem; }
         .inventory-label { display: block; font-size: 0.75rem; color: #9ca3af; margin-bottom: 0.25rem; }
+        .milestone-ready { box-shadow: 0 0 18px rgba(250, 204, 21, 0.8), inset 0 0 14px rgba(250, 204, 21, 0.2); animation: milestone-glow 1.4s ease-in-out infinite alternate; }
+        @keyframes milestone-glow { from { filter: brightness(1); transform: translateY(0); } to { filter: brightness(1.35); transform: translateY(-1px); } }
     </style>
 </head>
 <body class="bg-darker min-h-screen text-gray-200">
@@ -204,11 +206,8 @@
                             <span class="block text-xs text-gray-400 uppercase">Nivel</span>
                             <span id="modal-level" class="text-2xl font-bold text-primary"></span>
                         </div>
-                        <div class="mt-4 grid grid-cols-2 gap-2">
-                            <button onclick="openInventoryModal(currentCharId)" class="w-full bg-red-950/70 hover:bg-red-900 border border-red-700 text-white font-bold py-2 rounded-lg transition">⚔️ Inventario</button>
-                            <button onclick="openMentalModal(currentCharId)" class="w-full bg-purple-950/70 hover:bg-purple-900 border border-purple-700 text-white font-bold py-2 rounded-lg transition">🧠 Mente</button>
-                            <button onclick="openWorldModal(currentCharId)" class="w-full bg-emerald-950/70 hover:bg-emerald-900 border border-emerald-700 text-white font-bold py-2 rounded-lg transition">🌎 Mundo</button>
-                            <button onclick="openDestinyModal(currentCharId)" class="w-full bg-sky-950/70 hover:bg-sky-900 border border-sky-700 text-white font-bold py-2 rounded-lg transition">🔮 Destino</button>
+                        <div id="modal-milestone-buttons" class="mt-4 grid grid-cols-2 gap-2">
+                            <!-- Injected milestone access buttons -->
                         </div>
                         <div class="mt-4 bg-gray-900/70 rounded-lg border border-gray-700 p-4">
                             <h4 class="text-xs font-bold uppercase tracking-[0.2em] text-white mb-3">Atributos principales</h4>
@@ -239,12 +238,6 @@
                             <!-- Injected dynamically -->
                         </div>
 
-                        <div class="bg-yellow-950/20 rounded-lg border border-yellow-700/40 p-4">
-                            <h4 class="text-xs font-bold uppercase tracking-[0.2em] text-yellow-300 mb-3">Hitos de evolución</h4>
-                            <div id="modal-milestone-cards" class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-80 overflow-y-auto pr-2 text-gray-300">
-                                <!-- Milestone cards -->
-                            </div>
-                        </div>
 
                         <div class="bg-gray-900/70 rounded-lg border border-gray-700 p-4">
                             <div class="flex items-center justify-between gap-3 mb-3">
@@ -500,6 +493,56 @@
             char.pendingMilestones = (char.pendingMilestones || 0) + 1;
         }
 
+
+        function getDesignatedMilestoneCount(char) {
+            const manualMilestones = (char.milestones || []).filter(m => !isAutomaticSocietyMilestone(m)).length;
+            const equipmentCount = (char.equipment || []).length;
+            const mentalCount = (char.mental || []).length;
+            const world = normalizeWorldStatus(char.world);
+            const destiny = normalizeDestiny(char.destiny);
+            const hasWorld = Boolean(world.title || world.companions.length || world.missionOffense || world.missionProtect || world.debtTarget);
+            const hasDestiny = Boolean(destiny.curseAttr || destiny.blessingAttr || destiny.oathPath || destiny.oathName || destiny.notes);
+            return Math.max(manualMilestones, equipmentCount + mentalCount + (hasWorld ? 1 : 0) + (hasDestiny ? 1 : 0));
+        }
+
+        function getAvailableMilestoneSlots(char) {
+            return Math.max(0, Math.floor((Number(char.battles) || 0) / 30) - getDesignatedMilestoneCount(char));
+        }
+
+        function canAddMilestone(char) {
+            return getAvailableMilestoneSlots(char) > 0;
+        }
+
+        function renderMilestoneAccessButtons(char) {
+            const container = document.getElementById('modal-milestone-buttons');
+            if (!container) return;
+            const ready = canAddMilestone(char);
+            const readyClass = ready ? ' milestone-ready' : '';
+            const legend = ready ? '<p class="col-span-2 text-center text-xs text-yellow-300 font-bold animate-pulse">Agregar un hito</p>' : '';
+            container.innerHTML = `
+                ${legend}
+                <button onclick="openInventoryModal(currentCharId)" class="w-full bg-red-950/70 hover:bg-red-900 border border-red-700 text-white font-bold py-2 rounded-lg transition${readyClass}">⚔️ Inventario</button>
+                <button onclick="openMentalModal(currentCharId)" class="w-full bg-purple-950/70 hover:bg-purple-900 border border-purple-700 text-white font-bold py-2 rounded-lg transition${readyClass}">🧠 Mente</button>
+                <button onclick="openWorldModal(currentCharId)" class="w-full bg-emerald-950/70 hover:bg-emerald-900 border border-emerald-700 text-white font-bold py-2 rounded-lg transition${readyClass}">🌎 Mundo</button>
+                <button onclick="openDestinyModal(currentCharId)" class="w-full bg-sky-950/70 hover:bg-sky-900 border border-sky-700 text-white font-bold py-2 rounded-lg transition${readyClass}">🔮 Destino</button>
+            `;
+        }
+
+        function setFormAddMode(formId, canAdd, emptyMessage) {
+            const form = document.getElementById(formId);
+            if (!form) return;
+            let notice = document.getElementById(`${formId}-locked-notice`);
+            if (!notice) {
+                notice = document.createElement('div');
+                notice.id = `${formId}-locked-notice`;
+                notice.className = 'bg-gray-900/70 border border-gray-700 rounded-xl p-4 text-sm text-gray-400';
+                form.parentNode.insertBefore(notice, form);
+            }
+            notice.innerHTML = emptyMessage;
+            notice.classList.toggle('hidden', canAdd);
+            form.classList.toggle('hidden', !canAdd);
+        }
+
         function getMilestoneColor(type) {
             return MILESTONE_COLORS[type] || 'bg-gray-800 text-gray-200 border-gray-600';
         }
@@ -730,7 +773,7 @@
             state.characters.forEach(char => {
                 const totalPoints = char.points.pos + char.points.neg;
                 const needsPoints = totalPoints >= 10;
-                const needsMilestone = (char.pendingMilestones || 0) > 0;
+                const needsMilestone = canAddMilestone(char);
                 
                 // Prioritize setting pending action states visually
                 if (needsPoints) char.pendingAction = 'points';
@@ -753,6 +796,7 @@
                             <div class="shrink-0 flex gap-1"><button title="Inventario" onclick="event.stopPropagation(); openInventoryModal('${char.id}')" class="bg-red-950/70 hover:bg-red-900 border border-red-700 rounded-lg px-2 py-1 text-sm">⚔️</button><button title="Mente" onclick="event.stopPropagation(); openMentalModal('${char.id}')" class="bg-purple-950/70 hover:bg-purple-900 border border-purple-700 rounded-lg px-2 py-1 text-sm">🧠</button><button title="Mundo" onclick="event.stopPropagation(); openWorldModal('${char.id}')" class="bg-emerald-950/70 hover:bg-emerald-900 border border-emerald-700 rounded-lg px-2 py-1 text-sm">🌎</button><button title="Destino" onclick="event.stopPropagation(); openDestinyModal('${char.id}')" class="bg-sky-950/70 hover:bg-sky-900 border border-sky-700 rounded-lg px-2 py-1 text-sm">🔮</button></div>
                         </div>
                         <p class="text-sm text-primary mb-2">Nivel ${char.level} | ${char.battles} Batallas | ⚔️ ${inventoryCount} | 🧠 ${mentalCount}</p>
+                        ${getAvailableMilestoneSlots(char) > 0 ? '<p class="text-xs text-yellow-300 font-bold animate-pulse mb-2">Agregar un hito</p>' : ''}
                         <div class="flex gap-2 text-xs">
                             <span class="text-blue-400">INT: ${getDisplayedStat(char, 'INT')}</span>
                             <span class="text-red-400">FZA: ${getDisplayedStat(char, 'STR')}</span>
@@ -782,7 +826,7 @@
             document.getElementById('modal-neg').innerText = `-${char.points.neg}`;
 
             renderModalStats(char);
-            renderModalMilestones(char);
+            renderMilestoneAccessButtons(char);
             renderSocieties(char);
             
             const actionArea = document.getElementById('modal-action-area');
@@ -812,22 +856,6 @@
                 `;
             }
 
-            if ((char.pendingMilestones || 0) > 0) {
-                actionArea.classList.remove('hidden');
-                actionArea.innerHTML += `
-                    <div class="${char.pendingAction === 'points' ? 'mt-4 border-t border-indigo-500/40 pt-4' : ''}">
-                        <h4 class="text-sm font-bold text-white mb-2 flex items-center gap-2">🌟 Hito Evolutivo Disponible (${char.pendingMilestones})</h4>
-                        <p class="text-xs text-gray-300 mb-2">Cada 20 batallas desbloquean una tarjeta de hito. Completa tipo, nombre, descripción y una imagen opcional.</p>
-                        <select id="ms-type" class="w-full bg-dark border border-gray-700 rounded p-2 text-white text-sm mb-2">
-                            ${milestoneOptionsHtml()}
-                        </select>
-                        <input id="ms-name" placeholder="Nombre del hito..." required class="w-full bg-dark border border-gray-700 rounded p-2 text-white text-sm focus:border-primary mb-2">
-                        <textarea id="ms-description" placeholder="Descripción redactada del hito..." required rows="3" class="w-full bg-dark border border-gray-700 rounded p-2 text-white text-sm focus:border-primary mb-2"></textarea>
-                        <input type="url" id="ms-image" placeholder="URL de imagen opcional..." class="w-full bg-dark border border-gray-700 rounded p-2 text-white text-sm focus:border-primary">
-                        <button onclick="confirmMilestone()" class="mt-2 w-full bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-2 rounded text-sm transition">Registrar Hito</button>
-                    </div>
-                `;
-            }
 
             document.getElementById('char-modal').classList.remove('hidden');
         }
@@ -992,6 +1020,7 @@
             currentInventoryCharId = charId;
             char.equipment = char.equipment || [];
             document.getElementById('inventory-title').innerText = `⚔️ Inventario de ${char.name}`;
+            setFormAddMode('equipment-form', canAddMilestone(char), `Los hitos se pueden designar solo al completar cada bloque de 30 combates. ${char.name} lleva ${char.battles} combates y no tiene designaciones disponibles; aquí puedes ver los hitos ya asignados.`);
             resetEquipmentForm(false);
             renderEquipmentList(char);
             document.getElementById('inventory-modal').classList.remove('hidden');
@@ -1044,6 +1073,7 @@
             });
             if (!item.name) return alert('Debes nombrar la posesión.');
             const index = char.equipment.findIndex(eq => eq.id === item.id);
+            if (index < 0 && !canAddMilestone(char)) return alert('Solo puedes designar 1 hito por cada 30 combates totales del personaje.');
             if (index >= 0) char.equipment[index] = item; else char.equipment.push(item);
             saveState();
             openInventoryModal(char.id);
@@ -1119,6 +1149,7 @@
             currentMentalCharId = charId;
             char.mental = char.mental || [];
             document.getElementById('mental-title').innerText = `🧠 Desarrollo de ${char.name}`;
+            setFormAddMode('mental-form', canAddMilestone(char), `Los hitos se pueden designar solo al completar cada bloque de 30 combates. ${char.name} lleva ${char.battles} combates y no tiene designaciones disponibles; aquí puedes ver los hitos ya asignados.`);
             hydrateMentalAttrOptions();
             resetMentalForm(false);
             renderMentalList(char);
@@ -1174,6 +1205,7 @@
             });
             if (!item.name) return alert('Debes nombrar el hito mental.');
             const index = char.mental.findIndex(ms => ms.id === item.id);
+            if (index < 0 && !canAddMilestone(char)) return alert('Solo puedes designar 1 hito por cada 30 combates totales del personaje.');
             if (index >= 0) char.mental[index] = item; else char.mental.push(item);
             saveState();
             openMentalModal(char.id);
@@ -1228,6 +1260,7 @@
             document.getElementById('world-mission-protect').value = char.world.missionProtect;
             document.getElementById('world-debt-target').value = char.world.debtTarget;
             document.getElementById('world-debt-active').value = String(char.world.debtActive);
+            setFormAddMode('world-form', canAddMilestone(char), `Los hitos se pueden designar solo al completar cada bloque de 30 combates. ${char.name} lleva ${char.battles} combates y no tiene designaciones disponibles; aquí puedes ver sus hitos de mundo ya asignados.`);
             renderWorldSummary(char);
             document.getElementById('world-modal').classList.remove('hidden');
         }
@@ -1250,6 +1283,7 @@
             e.preventDefault();
             const char = state.characters.find(c => c.id === currentWorldCharId);
             if (!char) return;
+            if (!canAddMilestone(char)) return alert('Solo puedes designar 1 hito por cada 30 combates totales del personaje.');
             char.world = normalizeWorldStatus({
                 title: document.getElementById('world-title-input').value.trim(),
                 companions: Array.from(document.getElementById('world-companions').selectedOptions).map(o => o.value),
@@ -1282,6 +1316,7 @@
             document.getElementById('destiny-oath-attr').value = char.destiny.oathAttr;
             document.getElementById('destiny-oath-name').value = char.destiny.oathName;
             document.getElementById('destiny-notes').value = char.destiny.notes;
+            setFormAddMode('destiny-form', canAddMilestone(char), `Los hitos se pueden designar solo al completar cada bloque de 30 combates. ${char.name} lleva ${char.battles} combates y no tiene designaciones disponibles.`);
             document.getElementById('destiny-modal').classList.remove('hidden');
         }
 
@@ -1294,6 +1329,7 @@
             e.preventDefault();
             const char = state.characters.find(c => c.id === currentDestinyCharId);
             if (!char) return;
+            if (!canAddMilestone(char)) return alert('Solo puedes designar 1 hito por cada 30 combates totales del personaje.');
             char.destiny = normalizeDestiny({
                 curseAttr: document.getElementById('destiny-curse').value,
                 blessingAttr: document.getElementById('destiny-blessing').value,
@@ -1563,13 +1599,13 @@
                 let wChar = winningTeam[i];
                 wChar.battles++;
                 wChar.points.pos++;
-                if (wChar.battles % 20 === 0) queueMilestone(wChar);
+                if (wChar.battles % 30 === 0) queueMilestone(wChar);
                 
                 // Losers
                 let lChar = losingTeam[i];
                 lChar.battles++;
                 lChar.points.neg++;
-                if (lChar.battles % 20 === 0) queueMilestone(lChar);
+                if (lChar.battles % 30 === 0) queueMilestone(lChar);
             }
 
             // Process supernatural oath consequences and debt resolutions by individual duel.
